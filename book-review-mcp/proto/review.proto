@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package review;
+
+service ReviewService {
+  rpc GenerateReview (GenerateRequest) returns (GenerateResponse);
+}
+
+message GenerateRequest {
+  int32 userId = 1;
+  int32 bookId = 2;
+  int32 profileId = 3;
+}
+
+message GenerateResponse {
+  string markdown = 1;
+}
