@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Prompt {
+  userId  Int    @id
+  content String
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  bookTitle String
+  bookAuthor String
+  markdown  String
+  createdAt DateTime @default(now())
+}
