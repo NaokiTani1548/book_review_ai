@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package review;
+
+service ReviewService {
+  rpc UpdatePrompt (PromptRequest) returns (PromptResponse);
+  rpc GetPrompt (GetPromptRequest) returns (GetPromptResponse);
+  rpc GetReviews (GetReviewsRequest) returns (GetReviewsResponse);
+}
+
+message PromptRequest {
+  int32 userId = 1;
+  string content = 2;
+}
+
+message PromptResponse {
+  bool success = 1;
+}
+
+message GetPromptRequest {
+  int32 userId = 1;
+}
+
+message GetPromptResponse {
+  string content = 1;
+}
+
+message GetReviewsRequest {
+  int32 userId = 1;
+}
+
+message Review {
+  string bookTitle = 1;
+  string bookAuthor = 2;
+  string markdown = 3;
+  string createdAt = 4;
+}
+
+message GetReviewsResponse {
+  repeated Review reviews = 1;
+}
