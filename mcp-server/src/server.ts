@@ -1,6 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { handlePromptGet, handlePromptCreate, handlePromptUpdate } from './handlers/prompt.handler.js';
+import { getPrompt } from './tools/getPrompt.js';
+import { updatePrompt } from './tools/updatePrompt.js';
+import { getReview } from './tools/getReview.js';
 
 export async function startMCPServer() {
     const server = new McpServer({
@@ -9,10 +11,10 @@ export async function startMCPServer() {
         description: 'MCP server for Book Review AI',
     });
 
-    // Prompt 関連ハンドラ登録
-    server.tool('prompt.get', handlePromptGet as any);
-    server.tool('prompt.create', handlePromptCreate as any);
-    server.tool('prompt.update', handlePromptUpdate as any);
+    server.tool('prompt_get', getPrompt as any);
+    server.tool('prompt_create', updatePrompt as any);
+    server.tool('prompt_update', updatePrompt as any);
+    server.tool('review_get', getReview as any);
 
     const transport = new StdioServerTransport();
     await server.connect(transport);

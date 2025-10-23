@@ -1,14 +1,17 @@
 # 書評AI PoC (Book Review AI)
 
 ## 概要
-このプロジェクトは、ユーザーごとに異なる書評スタイルを学習し、自動で書評を生成する AI システムの PoC（Proof of Concept）です。
-
-現時点で以下を実装済み：
-- NestJS を用いた MCP (Microservice Control Plane) サーバー
-- gRPC サーバーの起動と RPC 呼び出し
-- サーバー内 PoC クライアントから `GenerateReview` の呼び出し確認
-
-書評の生成自体はダミー実装（Markdown形式でサンプルテキスト返却）です。
+書評を自動で書くAI「書評AI」
+書評はユーザーごとに書き方が違うので、利用ユーザーの書評をDBに保存しておき、特徴をプロンプトにまとめ、プロンプトを基に新たな書評を生成します。ユーザーの特徴をまとめたプロンプトもDBへ保存
+書評はNotionから取得
+### 利用イメージ
+・ユーザーがAIに自分の情報を登録依頼 
+→ ユーザーの文章の書き方を抽出し、特徴プロンプトを生成
+→　→ＡＩはそのユーザーの特徴をまとめたpromptの保存をuser_idと紐づけてバックエンドに依頼
+・ユーザーが本のタイトルを指定し、ＡＩに書評の作成を依頼
+→ＡＩはそのユーザーの特徴をまとめたpromptの取得（ＤＢに保存されている）をバックエンドに依頼
+→ＡＩは本のタイトルを基に本の内容を検索
+→ＡＩは取得したpromptと本の内容に従って書評を作成（Notionにそのまま貼れる形）し、ユーザーに回答
 
 ---
 
@@ -23,6 +26,38 @@
 
 ---
 
+## ファイル構成
+backend/
+├── src/
+│   ├── main.ts
+│   ├── app.module.ts
+│   ├── review/
+│   ├── prompt/
+│   └── proto/
+│       └── review.proto
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.ts
+├── docker/
+│   ├── init.sql
+│   └── init.sh
+├── Dockerfile
+├── docker-compose.yml
+└── package.json
+mcp-server/
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── main.ts
+│   ├── server.ts
+│   ├── grpc/
+│   │   ├── client.ts
+│   │   └── proto/review.proto
+│   └── handlers/
+│       ├── prompt.handler.ts
+│       └── review.handler.ts
+└── Dockerfile
+client/
 
 ---
 
@@ -58,9 +93,13 @@ grpcurl -plaintext   -proto backend/src/proto/review.proto   -d '{"userId":1}'  
 
 ```
 
-### 2. クライアントから呼び出し
+### 2. クライアント起動（MCPサーバー～MCPクライアント）
 ```bash 
-cd client
+npm run dev
+
+# MCPサーバーのみ起動
+npm run build
+npm start
 ```
 
 ## 開発Tips
