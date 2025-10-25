@@ -14,7 +14,10 @@ export const getPrompt = {
     return new Promise((resolve, reject) => {
       grpcClient.GetPrompt({ userId }, (err: any, res: any) => {
         if (err) return reject(err);
-        resolve({ content: res.content });
+        const content = Array.isArray(res.content)
+            ? res.content
+            : [{ type: 'text', text: String(res.content) }];
+        resolve({ content });
       });
     });
   },

@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { getPrompt } from './tools/getPrompt.js';
 import { updatePrompt } from './tools/updatePrompt.js';
 import { getReview } from './tools/getReview.js';
+import { searchBook } from './tools/searchBook.js';
 
 export async function startMCPServer() {
     const server = new McpServer({
@@ -11,10 +12,11 @@ export async function startMCPServer() {
         description: 'MCP server for Book Review AI',
     });
 
-    server.tool('prompt_get', getPrompt as any);
-    server.tool('prompt_create', updatePrompt as any);
-    server.tool('prompt_update', updatePrompt as any);
-    server.tool('review_get', getReview as any);
+    server.tool('get_prompt', getPrompt as any);
+    server.tool('create_prompt', updatePrompt as any);
+    server.tool('update_prompt', updatePrompt as any);
+    server.tool('get_review', getReview as any);
+    server.tool('search_book', searchBook as any);
 
     const transport = new StdioServerTransport();
     await server.connect(transport);

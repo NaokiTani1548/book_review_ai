@@ -7,6 +7,7 @@
     "build": "tsc && npm run copy:proto",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
+    "test_searchBook": "npx tsc && node dist/test_tools/test_searchBook.js",
     "copy:proto": "copyfiles -u 1 src/grpc/proto/*.proto dist/"
   },
   "keywords": [],
@@ -17,6 +18,8 @@
     "@grpc/proto-loader": "^0.8.0",
     "@modelcontextprotocol/sdk": "^1.20.1",
     "@nestjs/microservices": "^11.1.6",
+    "dotenv": "^17.2.3",
+    "node-fetch": "^3.3.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },

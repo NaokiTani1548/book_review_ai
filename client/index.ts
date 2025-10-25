@@ -1,219 +1,89 @@
-import { Anthropic } from "@anthropic-ai/sdk";
-import type {
-  MessageParam,
-  Tool,
-} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import readline from "readline/promises";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { RunnableSequence } from "@langchain/core/runnables";
+import type { RunnableConfig } from "@langchain/core/runnables";
+import { HumanMessage, AIMessage } from "@langchain/core/messages";
+import { MCPClient } from "./mcpClient.js";
+import { extractInfo } from "./chains/extractChain.js";
+import { model } from "./model.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-if (!ANTHROPIC_API_KEY) {
-  throw new Error("ANTHROPIC_API_KEY is not set");
-}
+// ---------- LangChainワークフロー ----------
+const reviewWorkflow = RunnableSequence.from([
+    async (input: string, config) => {
+        return await extractInfo(input, config);
+    },
 
-class MCPClient {
-    private mcp: Client;
-    private anthropic: Anthropic;
-    private transport: StdioClientTransport | null = null;
-    private tools: Tool[] = [];
-
-    constructor() {
-        this.anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-        this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
-    }
-
-    async connectToServer(serverScriptPath: string) {
-        if (!serverScriptPath.endsWith(".js")) {
-            throw new Error("Server script must be a .js file");
-        }
-        const command = process.execPath;
-
-        this.transport = new StdioClientTransport({
-            command,
-            args: [serverScriptPath],
-        });
-
-        await this.mcp.connect(this.transport);
-
-        const toolsResult = await this.mcp.listTools();
-        this.tools = toolsResult.tools.map((tool) => ({
-            name: tool.name,
-            description: tool.description ?? "",
-            input_schema: {
-                ...tool.inputSchema,
-                required: tool.inputSchema.required ?? null,
-            },
-        }));
-
-        console.log("✅ Connected to MCP server with tools:", this.tools.map(t => t.name));
-    }
-
-    async processQuery(query: string) {
-        console.log("[debug] Query:", query);
-        console.log("[debug] Tools:", this.tools.map(t => t.name));
-
-        const messages: MessageParam[] = [
-        {
-            role: "user",
-            content: query,
+  // Step 1: プロンプト取得 or 生成
+  async (input: { userId: string; title: string; author: string }, config) => {
+    console.log("userId:", input.userId);
+    console.log("title:", input.title);
+    const mcp = (config as { metadata: { mcp: MCPClient } }).metadata.mcp;
+    const prompt = await mcp.callTool({ name: "get_prompt", arguments: { user_id: input.userId } });
+    let userPromptRaw = prompt?.content;
+    if (!userPromptRaw) {
+        console.log("[debug] No prompt found, creating one...");
+        const reviewHistory = await mcp.callTool({ name: "get_review", arguments: { user_id: input.userId } });
+        const newPrompt = await mcp.callTool({
+        name: "create_prompt",
+        arguments: {
+            user_id: input.userId,
+            content_type: "book_review",
+            content: reviewHistory?.content ?? "",
         },
-        ];
-
-        let response;
-        try {
-            response = await this.anthropic.messages.create({
-                model: "claude-3-haiku-20240307",
-                max_tokens: 1000,
-                messages,
-                tools: this.tools,
-            });
-            console.log("[debug] Claude response:", response);
-        } catch (err) {
-            console.error("[debug] Error calling Claude API:", err);
-            return "⚠️ Claude API did not return a response";
-        }
-
-        const finalText: string[] = [];
-        const MAX_ROUNDS = 10;
-        let rounds = 0;
-
-        while (response.content.some(c => c.type === "tool_use")) {
-            if (++rounds > MAX_ROUNDS) break;
-
-            for (const content of response.content) {
-                if (content.type === "text") {
-                    finalText.push(content.text);
-                } else if (content.type === "tool_use") {
-                    const toolName = content.name;
-                    const toolArgs = content.input;
-
-                    messages.push({
-                        role: "assistant",
-                        content: [content],
-                    });
-
-                    try {
-                        console.log("[debug] Calling tool:", toolName, toolArgs);
-                        const safeArgs = { ...(toolArgs as Record<string, unknown> || {}) };
-                        const result = await this.mcp.callTool({
-                            name: toolName,
-                            arguments: safeArgs,
-                        });
-
-                        const toolResultContent: string =
-                        typeof result.content === "string"
-                            ? result.content
-                            : JSON.stringify(result.content);
-
-                        messages.push({
-                            role: "user",
-                            content: [
-                                {
-                                    type: "tool_result",
-                                    tool_use_id: content.id,
-                                    content: toolResultContent,
-                                },
-                            ],
-                        });
-
-                        response = await this.anthropic.messages.create({
-                            model: "claude-3-haiku-20240307",
-                            max_tokens: 1000,
-                            messages,
-                            tools: this.tools,
-                        });
-
-                        for (const block of response.content ?? []) {
-                            if (block.type === "text" && block.text) {
-                                finalText.push(block.text);
-                            }
-                        }
-                    } catch (err) {
-                        const errorMessage = `❌ Tool "${toolName}" failed: ${err}`;
-                        finalText.push(errorMessage);
-
-                        // ✅ エラーでも tool_use に対応する tool_result を返す
-                        messages.push({
-                            role: "user",
-                            content: [
-                                {
-                                type: "tool_result",
-                                tool_use_id: content.id,
-                                content: errorMessage,
-                                },
-                            ],
-                        });
-
-                        response = await this.anthropic.messages.create({
-                            model: "claude-3-haiku-20240307",
-                            max_tokens: 1000,
-                            messages,
-                            tools: this.tools,
-                        });
-
-                        for (const block of response.content ?? []) {
-                            if (block.type === "text" && block.text) {
-                                finalText.push(block.text);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return finalText.join("\n");
-}
-
-    async chatLoop() {
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
         });
-
-        try {
-            console.log("\n🧠 MCP Client Started!");
-            console.log("Type your queries or 'quit' to exit.");
-
-            while (true) {
-                const message = await rl.question("\nQuery: ");
-                if (message.toLowerCase() === "quit") break;
-
-                const response = await this.processQuery(message);
-                console.log("\n📘 Claude's Response:\n" + response);
-            }
-        } finally {
-            rl.close();
-        }
+        userPromptRaw = newPrompt.content;
     }
 
-    async cleanup() {
-        await this.mcp.close();
-    }
-}
+    const userPromptText = Array.isArray(userPromptRaw)
+        ? userPromptRaw.map((c: any) => c.text || "").join("\n")
+        : String(userPromptRaw);
+    return { ...input, userPrompt: userPromptText };
+  },
 
-async function main() {
-    if (process.argv.length < 3) {
-        console.log("Usage: node build/index.js <path_to_server_script>");
-        return;
-    }
+  // Step 2: 本の内容を取得（Web検索 or API）
+  async (context, config) => {
+    const mcp = (config as { metadata: { mcp: MCPClient } }).metadata.mcp;
+    const bookInfo = await mcp.callTool({
+        name: "search_book",
+        arguments: { title: context.title},
+    });
+    const bookContentText = Array.isArray(bookInfo?.content)
+        ? bookInfo.content.map((c: any) => c.text || "").join("\n")
+        : String(bookInfo?.content ?? "情報取得に失敗しました。");
+    return { ...context, bookContent: bookContentText };
+  },
 
-    const mcpClient = new MCPClient();
-    try {
-        const serverPath = process.argv[2];
-        if (!serverPath) {
-            console.log("Usage: node build/index.js <path_to_server_script>");
-            return;
-        }
-        await mcpClient.connectToServer(serverPath);
-        await mcpClient.chatLoop();
-    } finally {
-        await mcpClient.cleanup();
-        process.exit(0);
-    }
-}
+  // Step 3: Claudeによる書評生成
+  async (context) => {
+    console.log("userPrompt:", context.userPrompt);
+    console.log("bookContent", context.bookContent);
+    const prompt = `
+あなたは書評家AIです。以下のユーザー特徴と書籍内容をもとに、ユーザーの特徴を捉えた、自然な書評を作成してください。
 
-main();
+ユーザー特徴:
+${context.userPrompt}
+
+書籍タイトル: ${context.title}
+著者: ${context.author}
+書籍内容/レビュー: ${context.bookContent}
+    `;
+
+    const response = await model.invoke([new HumanMessage(prompt)]);
+    return response.content;
+  },
+]);
+
+// ---------- 実行 ----------
+(async () => {
+  const mcp = new MCPClient();
+  await mcp.connectToServer("../mcp-server/dist/main.js");
+  const userInput = "私はUserId1のユーザーです。芥川龍之介作『羅生門』の書評を生成してください。";
+  const output = await reviewWorkflow.invoke(
+    userInput,
+    { metadata: { mcp } }
+  );
+
+  console.log("📘 書評生成結果:\n", output);
+})();
