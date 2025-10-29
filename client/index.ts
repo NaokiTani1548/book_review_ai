@@ -20,12 +20,12 @@ const reviewWorkflow = RunnableSequence.from([
     console.log("userId:", input.userId);
     console.log("title:", input.title);
     const mcp = (config as { metadata: { mcp: MCPClient } }).metadata.mcp;
-    const prompt = await mcp.callTool({ name: "get_prompt", arguments: { user_id: input.userId } });
+    const prompt = await mcp.callTool({ name: "get_prompt", arguments: { userId: input.userId } });
     console.log("📥 get_prompt result:", JSON.stringify(prompt, null, 2));
     let userPromptRaw = prompt?.content;
     if (!userPromptRaw) {
         console.log("[debug] No prompt found, creating one...");
-        const reviewHistory = await mcp.callTool({ name: "get_review", arguments: { user_id: input.userId } });
+        const reviewHistory = await mcp.callTool({ name: "get_review", arguments: { userId: input.userId } });
         const newPrompt = await mcp.callTool({
         name: "create_prompt",
         arguments: {
