@@ -1,5 +1,7 @@
 import fetch from "node-fetch";
 import fs from "fs";
+import dotenv from "dotenv";
+dotenv.config(); // ← 必ず最初に呼ぶ
 
 // Create a writable stream for the log file
 const logFile = fs.createWriteStream("server.log", { flags: "a" });
