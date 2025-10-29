@@ -21,6 +21,7 @@ const reviewWorkflow = RunnableSequence.from([
     console.log("title:", input.title);
     const mcp = (config as { metadata: { mcp: MCPClient } }).metadata.mcp;
     const prompt = await mcp.callTool({ name: "get_prompt", arguments: { user_id: input.userId } });
+    console.log("📥 get_prompt result:", JSON.stringify(prompt, null, 2));
     let userPromptRaw = prompt?.content;
     if (!userPromptRaw) {
         console.log("[debug] No prompt found, creating one...");
@@ -49,6 +50,7 @@ const reviewWorkflow = RunnableSequence.from([
         name: "search_book",
         arguments: { title: context.title},
     });
+    console.log("📥 search_book result:", JSON.stringify(bookInfo, null, 2));
     const bookContentText = Array.isArray(bookInfo?.content)
         ? bookInfo.content.map((c: any) => c.text || "").join("\n")
         : String(bookInfo?.content ?? "情報取得に失敗しました。");

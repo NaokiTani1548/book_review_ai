@@ -1,7 +1,7 @@
 import type { RunnableConfig } from "@langchain/core/runnables";
 import { HumanMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
-import { model } from "./../model.js";
+import { model } from "../model.js";
 
 dotenv.config();
 

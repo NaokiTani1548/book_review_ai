@@ -85,8 +85,8 @@ export async function searchBookEnhanced(title: string) {
 
   try {
     const result = await searchBookEnhanced(title);
-    console.log("\n=== 📝 Review Snippets (first 1500 chars) ===");
-    console.log(result.reviewSnippets.slice(0, 1500));
+    console.log("\n=== 📝 Review Snippets ===");
+    console.log(result.reviewSnippets);
   } catch (err) {
     console.error("❌ Error during book search:", err);
   }

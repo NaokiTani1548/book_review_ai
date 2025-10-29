@@ -17,6 +17,6 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 const reviewProto: any = grpc.loadPackageDefinition(packageDefinition).review;
 
 export const grpcClient = new reviewProto.ReviewService(
-  'localhost:50051',
+  'localhost:5000',
   grpc.credentials.createInsecure()
 );
