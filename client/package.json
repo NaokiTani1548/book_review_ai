@@ -9,6 +9,9 @@
     "dev": "npx tsc && node dist/index.js ../mcp-server/dist/main.js",
     "test_extract": "npx tsc && node dist/test/testExtract.js",
     "test_get_prompt": "npx tsc && node dist/test/testGetPrompt.js",
+    "test_create_prompt": "npx tsc && node dist/test/testCreatePrompt.js",
+    "test_update_prompt": "npx tsc && node dist/test/testUpdatePrompt.js",
+    "test_get_review": "npx tsc && node dist/test/testGetReview.js",
     "test_search_book": "npx tsc && node dist/test/testSearchBook.js"
   },
   "keywords": [],
