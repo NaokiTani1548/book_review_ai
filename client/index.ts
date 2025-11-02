@@ -81,7 +81,7 @@ ${context.userPrompt}
 (async () => {
   const mcp = new MCPClient();
   await mcp.connectToServer("../mcp-server/dist/main.js");
-  const userInput = "私はUserId1のユーザーです。芥川龍之介作『羅生門』の書評を生成してください。";
+  const userInput = "私はUserId2のユーザーです。芥川龍之介作『羅生門』の書評を生成してください。";
   const output = await reviewWorkflow.invoke(
     userInput,
     { metadata: { mcp } }

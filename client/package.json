@@ -7,6 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx tsc && node dist/index.js ../mcp-server/dist/main.js",
+    "dev-chat": "npx tsc && node dist/mcpClient.js ../mcp-server/dist/main.js",
     "test_extract": "npx tsc && node dist/test/testExtract.js",
     "test_get_prompt": "npx tsc && node dist/test/testGetPrompt.js",
     "test_create_prompt": "npx tsc && node dist/test/testCreatePrompt.js",

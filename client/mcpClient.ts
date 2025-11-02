@@ -7,6 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import readline from "readline/promises";
 import dotenv from "dotenv";
+import { system_prompt } from "./SystemPrompt.js";
 
 dotenv.config();
 
@@ -61,6 +62,10 @@ export class MCPClient {
         console.log("[debug] Tools:", this.tools.map(t => t.name));
 
         const messages: MessageParam[] = [
+        { 
+            role: "assistant",
+            content: system_prompt,
+        },
         {
             role: "user",
             content: query,
