@@ -68,6 +68,26 @@ export class MCPClient {
     return summary;
   }
 
+  async requestOthers(): Promise<string> {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+    console.log("\n📚 その他リクエストしたい情報を入力してください");
+    console.log("\n例:○○という文言を入れてください\n例:箇条書きで出力してください\n例:400字以上で書評を書いてください。\n（入力が終わったら Enter を2回押してください）");
+
+    const lines: string[] = [];
+    while (true) {
+        const line = await rl.question("> ");
+        if (line.trim() === "") break;
+        lines.push(line);
+    }
+
+    rl.close();
+
+    const request = lines.join("\n").trim();
+    console.log("✅ リクエストを受け取りました:\n" + request);
+    return request;
+  }
+
   // -------------------------
   // 通常のClaude会話処理
   // -------------------------

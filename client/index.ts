@@ -5,6 +5,7 @@ import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { MCPClient } from "./mcpClient.js";
 import { extractInfo } from "./chains/extractChain.js";
 import { model } from "./model.js";
+import { system_prompt } from "./SystemPrompt.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -63,9 +64,12 @@ const reviewWorkflow = RunnableSequence.from([
     console.log("bookContent", context.bookContent);
     const prompt = `
 あなたは書評家AIです。以下のユーザー特徴と書籍内容をもとに、ユーザーの特徴を捉えた、自然な書評を作成してください。
+また、素晴らしい書評とは以下の書評生成ルールに遵守することです。
+書評生成ルール:${system_prompt}
 
 ユーザー特徴:
 ${context.userPrompt}
+
 
 書籍タイトル: ${context.title}
 著者: ${context.author}

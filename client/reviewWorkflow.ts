@@ -6,6 +6,7 @@ import type { MCPClient } from "./mcpClient.js";
 import { extractInfo } from "./chains/extractChain.js";
 import { model } from "./model.js";
 import dotenv from "dotenv";
+import { book_review_prompt } from "./bookReviewPrompt.js";
 
 dotenv.config();
 
@@ -24,9 +25,13 @@ export const reviewWorkflow = RunnableSequence.from([
     }
 
     const mcp: MCPClient = (config as any).metadata.mcp;
-    const chapterSummary = await mcp.requestChapterSummary();
-    let userPromptRaw = null;
 
+    //　章情報の入力
+    const chapterSummary = await mcp.requestChapterSummary();
+    // その他リクエスト情報の入力
+    const userRequest = await mcp.requestOthers();
+
+    let userPromptRaw = null;
     const promptRes = await mcp.callTool({ name: "get_prompt", arguments: { userId: input.userId } });
     userPromptRaw = promptRes?.content;
 
@@ -47,7 +52,7 @@ export const reviewWorkflow = RunnableSequence.from([
       ? userPromptRaw.map((c: any) => c.text || "").join("\n")
       : String(userPromptRaw);
 
-    return { ...input, userPrompt: userPromptText, chapterSummary: chapterSummary };
+    return { ...input, userPrompt: userPromptText, chapterSummary: chapterSummary, userRequest: userRequest };
   },
 
   // Step 2: 書籍内容取得（Web検索 or API）
@@ -63,10 +68,14 @@ export const reviewWorkflow = RunnableSequence.from([
   },
 
   // Step 3: Claude による書評生成
-  async (context: { userPrompt: string; title: string; bookContent: string; chapterSummary: string}) => {
+  async (context: { userPrompt: string; title: string; bookContent: string; chapterSummary: string; userRequest: string}) => {
+    console.log("userPrompt:", context.userPrompt)
+    console.log("bookContent:", context.bookContent)
     const prompt = `
-あなたは書評家AIです。以下のユーザー特徴と書籍内容をもとに、ユーザーの特徴を捉えた、自然な書評を作成してください。
-
+あなたは書評家AIです。以下のユーザー特徴と書籍内容、各章の内容をもとに、ユーザーの特徴を捉えた自然な書評を作成してください。
+また、素晴らしい書評とは以下の書評生成ルールに遵守することです。
+書評生成ルール:${book_review_prompt}
+ユーザーのリクエスト:${context.userRequest}
 ユーザー特徴:
 ${context.userPrompt}
 
