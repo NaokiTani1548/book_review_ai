@@ -22,6 +22,9 @@ export class MCPClient {
   private transport: StdioClientTransport | null = null;
   private tools: Tool[] = [];
 
+  // ✅ chatLoop と共通する readline を保持
+  private rl: readline.Interface | null = null;
+
   constructor() {
     this.anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
@@ -33,8 +36,8 @@ export class MCPClient {
 
   async connectToServer(serverScriptPath: string) {
     if (!serverScriptPath.endsWith(".js")) throw new Error("Server script must be a .js file");
-    const command = process.execPath;
 
+    const command = process.execPath;
     this.transport = new StdioClientTransport({ command, args: [serverScriptPath] });
     await this.mcp.connect(this.transport);
 
@@ -48,48 +51,81 @@ export class MCPClient {
     console.log("✅ Connected to MCP server with tools:", this.tools.map((t) => t.name));
   }
 
-  async requestChapterSummary(): Promise<string> {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-    console.log("\n📚 書籍内容理解のため、各章のタイトルと一言要約を入力してください。");
-    console.log("例:\n一章 タイトル - 要約: ...\n二章 タイトル - 要約: ...\n（入力が終わったら Enter を2回押してください）");
-
-    const lines: string[] = [];
-    while (true) {
-        const line = await rl.question("> ");
-        if (line.trim() === "") break;
-        lines.push(line);
-    }
-
-    rl.close();
-
-    const summary = lines.join("\n").trim();
-    console.log("✅ 章情報を受け取りました:\n" + summary);
-    return summary;
+  // ✅ 共通 readline を作る
+  private createChatReadline() {
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
   }
 
-  async requestOthers(): Promise<string> {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  // ✅ 章要約入力モード（chatLoop を停止 → 専用 readline → 再開）
+  async requestChapterSummary(): Promise<string> {
+    console.log("\n📚 各章のタイトルと要約を入力してください");
+    console.log("例:\n一章 タイトル - 要約: ...\n二章 タイトル - 要約: ...\n（入力が終わったら Enter を2回押してください）");
 
-    console.log("\n📚 その他リクエストしたい情報を入力してください");
-    console.log("\n例:○○という文言を入れてください\n例:箇条書きで出力してください\n例:400字以上で書評を書いてください。\n（入力が終わったら Enter を2回押してください）");
-
-    const lines: string[] = [];
-    while (true) {
-        const line = await rl.question("> ");
-        if (line.trim() === "") break;
-        lines.push(line);
+    // ✅ chatLoop の rl を中断
+    if (this.rl) {
+      this.rl.close();
+      this.rl = null;
     }
 
-    rl.close();
+    const rlChapter = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
 
-    const request = lines.join("\n").trim();
-    console.log("✅ リクエストを受け取りました:\n" + request);
-    return request;
+    const lines: string[] = [];
+
+    while (true) {
+      const line = await rlChapter.question("");
+      if (line.trim() === "") break;
+      lines.push(line.trim());
+    }
+
+    rlChapter.close();
+
+    console.log("✅ 章情報を受け取りました:\n" + lines.join("\n"));
+
+    this.createChatReadline();
+
+    return lines.join("\n");
+  }
+
+  // ✅ 特記事項入力モード（同様に readline を切り替え）
+  async requestOthers(): Promise<string> {
+    console.log("\n📚 その他リクエストしたい情報を入力してください（空行で終了）");
+    console.log("\n例:○○という文言を入れてください\n例:箇条書きで出力してください\n例:400字以上で書評を書いてください。\n（入力が終わったら Enter を2回押してください）");
+
+    if (this.rl) {
+      this.rl.close();
+      this.rl = null;
+    }
+
+    const rlOthers = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    const lines: string[] = [];
+
+    while (true) {
+      const line = await rlOthers.question("");
+      if (line.trim() === "") break;
+      lines.push(line.trim());
+    }
+
+    rlOthers.close();
+
+    console.log("✅ その他情報を受け取りました:\n" + lines.join("\n"));
+
+    this.createChatReadline();
+
+    return lines.join("\n");
   }
 
   // -------------------------
-  // 通常のClaude会話処理
+  // Claude の通常処理
   // -------------------------
   async processQuery(query: string) {
     console.log("[debug] Query:", query);
@@ -104,11 +140,10 @@ export class MCPClient {
     try {
       response = await this.anthropic.messages.create({
         model: "claude-3-haiku-20240307",
-        max_tokens: 2500,
+        max_tokens: 4000,
         messages,
         tools: this.tools,
       });
-      console.log("[debug] Claude response:", response);
     } catch (err) {
       console.error("[debug] Error calling Claude API:", err);
       return "⚠️ Claude API did not return a response";
@@ -131,12 +166,15 @@ export class MCPClient {
           messages.push({ role: "assistant", content: [content] });
 
           try {
-            console.log("[debug] Calling tool:", toolName, toolArgs);
-            const safeArgs = { ...(toolArgs as Record<string, unknown> || {}) };
-            const result = await this.mcp.callTool({ name: toolName, arguments: safeArgs });
+            const result = await this.mcp.callTool({
+              name: toolName,
+              arguments: { ...(toolArgs as Record<string, unknown> || {}) },
+            });
 
-            const toolResultContent: string =
-              typeof result.content === "string" ? result.content : JSON.stringify(result.content);
+            const toolResultContent =
+              typeof result.content === "string"
+                ? result.content
+                : JSON.stringify(result.content);
 
             messages.push({
               role: "user",
@@ -145,7 +183,7 @@ export class MCPClient {
 
             response = await this.anthropic.messages.create({
               model: "claude-3-haiku-20240307",
-              max_tokens: 1000,
+              max_tokens: 4000,
               messages,
               tools: this.tools,
             });
@@ -154,12 +192,7 @@ export class MCPClient {
               if (block.type === "text" && block.text) finalText.push(block.text);
             }
           } catch (err) {
-            const errorMessage = `❌ Tool "${toolName}" failed: ${err}`;
-            finalText.push(errorMessage);
-            messages.push({
-              role: "user",
-              content: [{ type: "tool_result", tool_use_id: content.id, content: errorMessage }],
-            });
+            finalText.push(`❌ Tool "${toolName}" failed: ${err}`);
           }
         }
       }
@@ -169,54 +202,49 @@ export class MCPClient {
   }
 
   // -------------------------
-  // チャットループ（通常会話と書評生成を切り替え）
+  // チャットループ
   // -------------------------
   async chatLoop() {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    this.createChatReadline();
+    const rl = this.rl;
 
-    try {
-      console.log("\n🧠 MCP Client Started!");
-      console.log("Type your queries or 'quit' to exit.");
+    if (!rl) throw new Error("Readline failed to initialize");
 
-      while (true) {
-        const message = await rl.question("\nQuery: ");
-        if (message.toLowerCase() === "quit") break;
+    console.log("\n🧠 MCP Client Started!");
+    console.log("Type your queries or 'quit' to exit.");
 
-        // -----------------------------
-        // 入力解析：書評生成か通常会話か判定
-        // -----------------------------
-        let isBookReview = false;
-        let extractResult: { userId?: string; title?: string; is_book_review?: boolean } = {};
-        try {
-          extractResult = await extractInfo(message, { metadata: { mcp: this } });
-          isBookReview = !!extractResult.is_book_review;
-        } catch (err) {
-          console.log("[debug] 書評生成判定に失敗、通常会話として処理します");
-        }
+    while (true) {
+      const message = await rl.question("\nQuery: ");
+      if (message.toLowerCase() === "quit") break;
 
-        // -----------------------------
-        // 書評生成の場合はLangChain workflowを実行
-        // -----------------------------
-        if (isBookReview) {
-          try {
-            const output = await reviewWorkflow.invoke(message, { metadata: { mcp: this } });
-            console.log("\n📘 書評生成結果:\n" + output);
-            continue;
-          } catch (err) {
-            console.error("❌ 書評生成に失敗:", err);
-            console.log("通常会話として処理します...");
-          }
-        }
+      // -----------------------------  
+      // 書評生成判定  
+      // -----------------------------  
+      let extractResult: any = {};
+      let isBookReview = false;
 
-        // -----------------------------
-        // 通常会話
-        // -----------------------------
-        const response = await this.processQuery(message);
-        console.log("\n📘 Claude's Response:\n" + response);
+      try {
+        extractResult = await extractInfo(message, { metadata: { mcp: this } });
+        isBookReview = !!extractResult.is_book_review;
+      } catch (_) {}
+
+      // -----------------------------  
+      // 書評生成  
+      // -----------------------------  
+      if (isBookReview) {
+        const output = await reviewWorkflow.invoke(message, { metadata: { mcp: this } });
+        console.log("\n📘 書評生成結果:\n" + output);
+        continue;
       }
-    } finally {
-      rl.close();
+
+      // -----------------------------  
+      // 通常会話  
+      // -----------------------------  
+      const response = await this.processQuery(message);
+      console.log("\n📘 Claude's Response:\n" + response);
     }
+
+    rl.close();
   }
 
   async cleanup() {
@@ -228,19 +256,14 @@ export class MCPClient {
 // メイン実行
 // -------------------------
 async function main() {
-  if (process.argv.length < 3) {
+  const serverPath = process.argv[2];
+  if (!serverPath) {
     console.log("Usage: node build/index.js <path_to_server_script>");
     return;
   }
 
   const mcpClient = new MCPClient();
   try {
-    const serverPath = process.argv[2];
-    if (!serverPath) {
-      console.log("Usage: node build/index.js <path_to_server_script>");
-      return;
-    }
-
     await mcpClient.connectToServer(serverPath);
     await mcpClient.chatLoop();
   } finally {

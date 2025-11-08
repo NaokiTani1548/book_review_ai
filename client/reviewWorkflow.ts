@@ -74,17 +74,17 @@ export const reviewWorkflow = RunnableSequence.from([
     const prompt = `
 あなたは書評家AIです。以下のユーザー特徴と書籍内容、各章の内容をもとに、ユーザーの特徴を捉えた自然な書評を作成してください。
 また、素晴らしい書評とは以下の書評生成ルールに遵守することです。
-書評生成ルール:${book_review_prompt}
 ユーザーのリクエスト:${context.userRequest}
-ユーザー特徴:
-${context.userPrompt}
-
+ユーザー特徴:${context.userPrompt}
+書評生成ルール:${book_review_prompt}
 書籍タイトル: ${context.title}
 書籍内容/レビュー: ${context.bookContent}
 各章のタイトル及び要約:${context.chapterSummary}
     `;
 
-    const response = await model.invoke([new HumanMessage(prompt)]);
+    const response = await model.invoke(
+        [new HumanMessage(prompt)],
+    );
     return response.content;
   },
 ]);
