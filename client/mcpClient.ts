@@ -4,11 +4,11 @@ import type { MessageParam, Tool } from "@anthropic-ai/sdk/resources/messages/me
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import readline from "readline/promises";
-import dotenv from "dotenv";
 import { system_prompt } from "./SystemPrompt.js";
-import { reviewWorkflow } from "./reviewWorkflow.js";
-import { extractInfo } from "./chains/extractChain.js";
+import { reviewWorkflow } from "./workflows/reviewWorkflow.js";
+import { extractRequestInfo } from "./chains/extractChain.js";
 import { anthropic } from "./model.js";
+import { upsertPromptWorkflow } from "./workflows/upsertPromptWorkflow.js";
 
 export class MCPClient {
   private mcp: Client;
@@ -216,11 +216,21 @@ export class MCPClient {
       // -----------------------------  
       let extractResult: any = {};
       let isBookReview = false;
+      let isUpsertPrompt = false;
 
       try {
-        extractResult = await extractInfo(message, { metadata: { mcp: this } });
+        extractResult = await extractRequestInfo(message, { metadata: { mcp: this } });
+        isUpsertPrompt = !!extractResult.is_upsert_prompt;
         isBookReview = !!extractResult.is_book_review;
+        console.log("[debug] is_upsert_prompt?:", isUpsertPrompt);
+        console.log("[debug] is_book_review?:", isBookReview);
       } catch (_) {}
+
+      if (isUpsertPrompt) {
+        const result = await upsertPromptWorkflow.invoke(message, { metadata: { mcp: this } });
+        console.log("\n📘 プロンプト生成結果:\n" + result.new_prompt);
+        continue;
+      }
 
       // -----------------------------  
       // 書評生成  
@@ -234,8 +244,11 @@ export class MCPClient {
       // -----------------------------  
       // 通常会話  
       // -----------------------------  
-      const response = await this.processQuery(message);
-      console.log("\n📘 Claude's Response:\n" + response);
+      if (!isBookReview && !isUpsertPrompt) {
+        console.log("ℹ️ 書評生成またはプロンプト登録の意図がないため、通常会話モードで案内します");
+        const response = await this.processQuery(message);
+        console.log("\n📘 Claude's Response:\n" + response);
+      }
     }
 
     rl.close();

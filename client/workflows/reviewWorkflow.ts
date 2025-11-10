@@ -2,11 +2,11 @@
 import { RunnableSequence } from "@langchain/core/runnables";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import { HumanMessage } from "@langchain/core/messages";
-import type { MCPClient } from "./mcpClient.js";
-import { extractInfo } from "./chains/extractChain.js";
-import { model } from "./model.js";
+import type { MCPClient } from "../mcpClient.js";
+import { extractReviewBookInfo } from "../chains/extractChain.js";
+import { model } from "../model.js";
 import dotenv from "dotenv";
-import { book_review_prompt } from "./bookReviewPrompt.js";
+import { book_review_prompt } from "../bookReviewPrompt.js";
 
 dotenv.config();
 
@@ -15,7 +15,7 @@ export const reviewWorkflow = RunnableSequence.from([
 
   // Step 0: 入力から userId, title, author, is_book_review を抽出
   async (input: string, config: RunnableConfig) => {
-    return await extractInfo(input, config);
+    return await extractReviewBookInfo(input, config);
   },
 
   // Step 1: ユーザー用プロンプト取得または生成
@@ -34,19 +34,6 @@ export const reviewWorkflow = RunnableSequence.from([
     let userPromptRaw = null;
     const promptRes = await mcp.callTool({ name: "get_prompt", arguments: { userId: input.userId } });
     userPromptRaw = promptRes?.content;
-
-    if (!userPromptRaw) {
-      const reviewHistory = await mcp.callTool({ name: "get_review", arguments: { userId: input.userId } });
-      const newPrompt = await mcp.callTool({
-        name: "create_prompt",
-        arguments: {
-          user_id: input.userId,
-          content_type: "book_review",
-          content: reviewHistory?.content ?? "",
-        },
-      });
-      userPromptRaw = newPrompt.content;
-    }
 
     const userPromptText = Array.isArray(userPromptRaw)
       ? userPromptRaw.map((c: any) => c.text || "").join("\n")
