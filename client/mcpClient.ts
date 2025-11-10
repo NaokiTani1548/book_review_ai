@@ -8,13 +8,7 @@ import dotenv from "dotenv";
 import { system_prompt } from "./SystemPrompt.js";
 import { reviewWorkflow } from "./reviewWorkflow.js";
 import { extractInfo } from "./chains/extractChain.js";
-
-dotenv.config();
-
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-if (!ANTHROPIC_API_KEY) {
-  throw new Error("ANTHROPIC_API_KEY is not set");
-}
+import { anthropic } from "./model.js";
 
 export class MCPClient {
   private mcp: Client;
@@ -26,7 +20,7 @@ export class MCPClient {
   private rl: readline.Interface | null = null;
 
   constructor() {
-    this.anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    this.anthropic = anthropic;
     this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
   }
 
