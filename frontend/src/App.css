@@ -1,0 +1,105 @@
+/* 全体背景をLINE風に */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #e5ddd5; /* LINEっぽい背景色 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 18px; /* 全体の文字サイズを大きめに */
+}
+
+.chat-background {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #e5ddd5;
+}
+
+.connection-status {
+  border-radius: 12px;
+  padding: 12px 16px;
+  background-color: #fff;
+}
+
+.chat-container {
+  width: 100%;
+  max-width: 1600px;
+  height: 85vh; /* 少し大きめに */
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border-radius: 20px; /* 角丸を大きめに */
+  overflow: hidden;
+}
+
+/* 上部タイトル */
+.chat-header {
+  background-color: #075e54;
+  color: white;
+  padding: 16px 20px; /* ヘッダーも広めに */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 20px; /* タイトル文字を大きく */
+}
+
+/* メッセージ部分 */
+.chat-messages {
+  flex: 1;
+  padding: 20px; /* 内側余白を広げる */
+  overflow-y: auto;
+  background-color: #bae7e7;
+}
+
+/* 吹き出し1行 */
+.chat-row {
+  display: flex;
+  margin-bottom: 12px; /* 行間を広げる */
+}
+
+.chat-row.right {
+  justify-content: flex-end;
+}
+
+.chat-row.left {
+  justify-content: flex-start;
+}
+
+/* 吹き出し本体 */
+.chat-bubble {
+  max-width: 90%; /* 吹き出し幅を広げる */
+  padding: 14px 18px; /* 内側余白を広げる */
+  border-radius: 16px; /* 角丸を大きめに */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  word-wrap: break-word;
+  font-size: 24px; /* 吹き出し文字サイズを大きく */
+  line-height: 1.6; /* 行間を広めに */
+}
+
+/* ユーザー（右側）メッセージ */
+.bubble-user {
+  background-color: #d9fdd3;
+  border-bottom-right-radius: 0;
+}
+
+/* システム（左側）メッセージ */
+.bubble-system {
+  background-color: #fff;
+  border-bottom-left-radius: 0;
+}
+
+/* 入力エリア */
+.chat-input {
+  display: flex;
+  gap: 12px;
+  padding: 14px; /* 入力欄も広めに */
+  background-color: #f0f0f0;
+  border-top: 1px solid #ddd;
+  font-size: 18px; /* 入力文字サイズ */
+}

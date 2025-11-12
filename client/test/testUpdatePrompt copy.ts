@@ -22,8 +22,6 @@ async function testCallTool() {
         console.dir(result, { depth: null });
     } catch (err) {
         console.error("❌ callTool failed:", err);
-    } finally {
-        await mcp.cleanup();
     }
 }
 
