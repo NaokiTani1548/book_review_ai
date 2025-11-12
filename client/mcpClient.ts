@@ -195,88 +195,88 @@ export class MCPClient {
     return finalText.join("\n");
   }
 
-  // -------------------------
-  // チャットループ
-  // -------------------------
-  async chatLoop() {
-    this.createChatReadline();
-    const rl = this.rl;
+//   // -------------------------
+//   // チャットループ
+//   // -------------------------
+//   async chatLoop() {
+//     this.createChatReadline();
+//     const rl = this.rl;
 
-    if (!rl) throw new Error("Readline failed to initialize");
+//     if (!rl) throw new Error("Readline failed to initialize");
 
-    console.log("\n🧠 MCP Client Started!");
-    console.log("Type your queries or 'quit' to exit.");
+//     console.log("\n🧠 MCP Client Started!");
+//     console.log("Type your queries or 'quit' to exit.");
 
-    while (true) {
-      const message = await rl.question("\nQuery: ");
-      if (message.toLowerCase() === "quit") break;
+//     while (true) {
+//       const message = await rl.question("\nQuery: ");
+//       if (message.toLowerCase() === "quit") break;
 
-      // -----------------------------  
-      // 書評生成判定  
-      // -----------------------------  
-      let extractResult: any = {};
-      let isBookReview = false;
-      let isUpsertPrompt = false;
+//       // -----------------------------  
+//       // 書評生成判定  
+//       // -----------------------------  
+//       let extractResult: any = {};
+//       let isBookReview = false;
+//       let isUpsertPrompt = false;
 
-      try {
-        extractResult = await extractRequestInfo(message, { metadata: { mcp: this } });
-        isUpsertPrompt = !!extractResult.is_upsert_prompt;
-        isBookReview = !!extractResult.is_book_review;
-        console.log("[debug] is_upsert_prompt?:", isUpsertPrompt);
-        console.log("[debug] is_book_review?:", isBookReview);
-      } catch (_) {}
+//       try {
+//         extractResult = await extractRequestInfo(message, { metadata: { mcp: this } });
+//         isUpsertPrompt = !!extractResult.is_upsert_prompt;
+//         isBookReview = !!extractResult.is_book_review;
+//         console.log("[debug] is_upsert_prompt?:", isUpsertPrompt);
+//         console.log("[debug] is_book_review?:", isBookReview);
+//       } catch (_) {}
 
-      if (isUpsertPrompt) {
-        const result = await upsertPromptWorkflow.invoke(message, { metadata: { mcp: this } });
-        console.log("\n📘 プロンプト生成結果:\n" + result.new_prompt);
-        continue;
-      }
+//       if (isUpsertPrompt) {
+//         const result = await upsertPromptWorkflow.invoke(message, { metadata: { mcp: this } });
+//         console.log("\n📘 プロンプト生成結果:\n" + result.new_prompt);
+//         continue;
+//       }
 
-      // -----------------------------  
-      // 書評生成  
-      // -----------------------------  
-      if (isBookReview) {
-        const output = await reviewWorkflow.invoke(message, { metadata: { mcp: this } });
-        console.log("\n📘 書評生成結果:\n" + output);
-        continue;
-      }
+//       // -----------------------------  
+//       // 書評生成  
+//       // -----------------------------  
+//       if (isBookReview) {
+//         const output = await reviewWorkflow.invoke(message, { metadata: { mcp: this } });
+//         console.log("\n📘 書評生成結果:\n" + output);
+//         continue;
+//       }
 
-      // -----------------------------  
-      // 通常会話  
-      // -----------------------------  
-      if (!isBookReview && !isUpsertPrompt) {
-        console.log("ℹ️ 書評生成またはプロンプト登録の意図がないため、通常会話モードで案内します");
-        const response = await this.processQuery(message);
-        console.log("\n📘 Claude's Response:\n" + response);
-      }
-    }
+//       // -----------------------------  
+//       // 通常会話  
+//       // -----------------------------  
+//       if (!isBookReview && !isUpsertPrompt) {
+//         console.log("ℹ️ 書評生成またはプロンプト登録の意図がないため、通常会話モードで案内します");
+//         const response = await this.processQuery(message);
+//         console.log("\n📘 Claude's Response:\n" + response);
+//       }
+//     }
 
-    rl.close();
-  }
+//     rl.close();
+//   }
 
-  async cleanup() {
-    await this.mcp.close();
-  }
+//   async cleanup() {
+//     await this.mcp.close();
+//   }
 }
 
-// -------------------------
-// メイン実行
-// -------------------------
-async function main() {
-  const serverPath = process.argv[2];
-  if (!serverPath) {
-    console.log("Usage: node build/index.js <path_to_server_script>");
-    return;
-  }
+// // -------------------------
+// // メイン実行
+// // -------------------------
+// async function main() {
+//   const serverPath = process.argv[2];
+//   if (!serverPath) {
+//     console.log("Usage: node build/index.js <path_to_server_script>");
+//     return;
+//   }
 
-  const mcpClient = new MCPClient();
-  try {
-    await mcpClient.connectToServer(serverPath);
-    await mcpClient.chatLoop();
-  } finally {
-    await mcpClient.cleanup();
-    process.exit(0);
-  }
-}
+//   const mcpClient = new MCPClient();
+//   try {
+//     await mcpClient.connectToServer(serverPath);
+//     await mcpClient.chatLoop();
+//   } finally {
+//     await mcpClient.cleanup();
+//     process.exit(0);
+//   }
+// }
 
-main();
+// main();
