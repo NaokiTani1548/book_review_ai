@@ -5,7 +5,7 @@ import type { MCPClient } from "../mcpClient.js";
 import { extractReviewBookInfo } from "../chains/extractChain.js";
 import { model } from "../model.js";
 import dotenv from "dotenv";
-import { book_review_prompt } from "../bookReviewPrompt.js";
+import { book_review_prompt } from "./../prompt/bookReviewPrompt.js";
 
 dotenv.config();
 

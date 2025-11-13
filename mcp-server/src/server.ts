@@ -1,8 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { getPrompt } from './tools/getPrompt.js';
-import { updatePrompt } from './tools/updatePrompt.js';
-import { getReview } from './tools/getReview.js';
 import { fetchBookReviews } from './tools/searchBook.js';
 import { grpcClient } from './grpc/client.js';
 import { z } from "zod";

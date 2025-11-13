@@ -102,7 +102,7 @@ cd backend
 npm install
 npm run start:dev
 
-# RPC疎通確認
+# RPC疎通確認(ルートから)
 grpcurl -plaintext   -proto backend/src/proto/review.proto   -d '{"userId":1}'   localhost:5000 review.ReviewService/GetPrompt
 grpcurl -plaintext   -proto backend/src/proto/review.proto   -d '{"userId":1, "content":"口語的で短文多め。語尾がa"}'   localhost:5000 review.ReviewService/UpdatePrompt
 grpcurl -plaintext   -proto backend/src/proto/review.proto   -d '{"userId":1}'   localhost:5000 review.ReviewService/GetReviews
@@ -113,18 +113,17 @@ grpcurl -plaintext   -proto backend/src/proto/review.proto   -d '{"userId":1}'  
 
 ```bash
 cd client
-npm run dev-chat
+npm run dev
 
 # 各ツールのテスト
 cd client
-npm run test_extract
 npm run test_get_prompt
 npm run test_create_prompt
 npm run test_update_prompt
 npm run test_get_review
 npm run test_search_book
 
-# MCPサーバーのみ起動
+# MCPサーバーのみ起動(クライアントの起動で一緒に起動する）
 cd mcp-server
 npm run build
 npm start
