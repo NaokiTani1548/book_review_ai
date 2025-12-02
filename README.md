@@ -20,12 +20,13 @@
 
 ## 技術スタック
 
-| 層           | 技術                 |
-| ------------ | -------------------- |
-| サーバー     | NestJS + gRPC        |
-| データベース | Prisma + MySQL       |
-| クライアント | Node.js + gRPC (PoC) |
-| 書式         | Markdown             |
+| 層                                   | 技術                   |
+| ------------------------------------ | ---------------------- |
+| バックエンドサーバー                 | NestJS + gRPC          |
+| データベース                         | Prisma + MySQL         |
+| gRPC クライアント(MCP サーバー)      | TypeScript + gRPC      |
+| MCP クライアント(WebSocket サーバー) | TypeScript + WebSocket |
+| フロントエンド                       | TypeScript + WebSocket |
 
 ---
 
